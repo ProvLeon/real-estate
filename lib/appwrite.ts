@@ -1,5 +1,6 @@
-import { Account, Avatars, Client } from "react-native-appwrite";
+import { Account, Avatars, Client, OAuthProvider } from "react-native-appwrite";
 import * as Linking from "expo-linking";
+import { openAuthSessionAsync } from "expo-web-browser";
 
 export const config = {
   platform: "com.orlixis.restate",
@@ -21,10 +22,30 @@ export const login = async () => {
   try {
     const redirectUi = Linking.createURL("/");
 
-    const response = await account.createOAuth2Session();
+    const response = account.createOAuth2Session(
+      OAuthProvider.Google,
+      redirectUi,
+    );
+
+    if (!response) throw new Error("Failed to Login");
+
+    const browserResult = await openAuthSessionAsync(
+      response.toString(),
+      redirectUi,
+    );
+
+    if (browserResult.type !== "success") throw new Error("Failed to Login");
+
+    const url = new URL(browserResult.url);
+    const secret = url.searchParams.get("secret")?.toString();
+    const userId = url.searchParams.get("userId")?.toString();
+
+    if (!secret || !userId) throw new Error("Failed to Login");
+
+    const session = await account.createSession(userId, secret);
+    if (!session) throw new Error("Failed to create a session");
   } catch (error) {
     console.error(error);
-    dd;
     return false;
   }
 };
