@@ -14,6 +14,7 @@ interface GlobalContextType {
   loading: boolean;
   refetch: (newParams?: Record<string, string | number>) => Promise<void>;
 }
+
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
 
 export const GlobalProvider = ({ children }: { children: ReactNode }) => {
