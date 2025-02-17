@@ -20,32 +20,76 @@ export const account = new Account(client);
 
 export const login = async () => {
   try {
-    const redirectUi = Linking.createURL("/");
+    const redirectUri = Linking.createURL("/");
+    console.log("Redirect URI:", redirectUri);
 
-    const response = account.createOAuth2Session(
+    const response = account.createOAuth2Token(
       OAuthProvider.Google,
-      redirectUi,
+      redirectUri,
     );
+    console.log("OAuth response:", response);
 
-    if (!response) throw new Error("Failed to Login");
+    if (!response) {
+      console.log("No response from createOAuth2Session");
+      throw new Error("Failed to Login: No OAuth response");
+    }
 
     const browserResult = await openAuthSessionAsync(
       response.toString(),
-      redirectUi,
+      redirectUri,
     );
+    console.log("Browser result:", browserResult);
 
-    if (browserResult.type !== "success") throw new Error("Failed to Login");
+    if (browserResult.type !== "success") {
+      console.log("Browser result type:", browserResult.type);
+      throw new Error("Failed to Login: Browser authentication failed");
+    }
 
     const url = new URL(browserResult.url);
+    console.log("Parsed URL:", url);
+
     const secret = url.searchParams.get("secret")?.toString();
     const userId = url.searchParams.get("userId")?.toString();
+    console.log("Secret:", secret, "UserID:", userId);
 
-    if (!secret || !userId) throw new Error("Failed to Login");
+    if (!secret || !userId) {
+      throw new Error("Failed to Login: Missing secret or userId");
+    }
 
     const session = await account.createSession(userId, secret);
-    if (!session) throw new Error("Failed to create a session");
+    console.log("Session created:", session);
+
+    if (!session) {
+      throw new Error("Failed to Login: Session creation failed");
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Login error details:", error);
+    return false;
+  }
+};
+
+export const logout = async () => {
+  try {
+    await account.deleteSession("current");
+    return true;
   } catch (error) {
     console.error(error);
     return false;
+  }
+};
+
+export const getCurrentUser = async () => {
+  try {
+    const response = await account.get();
+
+    if (response.$id) {
+      const userAvatar = avatar.getInitials(response.name);
+      return { ...response, avatar: userAvatar.toString() };
+    }
+  } catch (error) {
+    console.error(error);
+    return null;
   }
 };
