@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { categories } from "../constants/data.ts";
 
@@ -10,6 +10,14 @@ const Filters = () => {
   );
 
   const handleCategoryPress = (category: string) => {
+    if (selectedCategory === category) {
+      setSelectedCategory("All");
+      router.setParams({ filter: "All" });
+      return;
+    }
+
+    setSelectedCategory(category);
+    router.setParams({ filter: category });
   };
 
   return (
@@ -20,12 +28,23 @@ const Filters = () => {
     >
       {categories.map((item, index) => (
         <TouchableOpacity
+          key={index}
           onPress={() => handleCategoryPress(item.category)}
-          className={`flex flex-col items-start mr-4 px-4 rounded-full ${
-            selectedCategory ? "bg-primary-300" : "bg-primary-100"
+          className={`flex flex-col items-start mr-4 px-4 py-2 rounded-full ${
+            selectedCategory === item.category
+              ? "bg-primary-300"
+              : "bg-primary-100 border border-primary-200"
           }`}
         >
-          <Text>{item.title}</Text>
+          <Text
+            className={`text-sm ${
+              selectedCategory === item.category
+                ? "text-white font-rubik-bold"
+                : "text-black-300 font-rubik"
+            }`}
+          >
+            {item.title}
+          </Text>
         </TouchableOpacity>
       ))}
     </ScrollView>
