@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import {
+  ActivityIndicator,
   Button,
   FlatList,
   Image,
@@ -15,21 +17,68 @@ import { Card, FeaturedCard } from "../../../components/Cards.tsx";
 import Filters from "../../../components/Filters.tsx";
 import { useGlobalContext } from "../../../lib/global-provider.tsx";
 import seed from "../../../lib/seed.ts";
+import { useLocalSearchParams } from "expo-router";
+import { useAppwrite } from "../../../lib/useAppwrite.ts";
+import { getLatestProperties, getProperties } from "../../../lib/appwrite.ts";
+import { router } from "expo-router";
+import { Models } from "react-native-appwrite";
+import NoResults from "../../../components/NoResults.tsx";
 
 export default function Index() {
   const { user } = useGlobalContext();
+  const params = useLocalSearchParams<
+    { query?: string; filter: string }
+  >();
+
+  const handleCardPress = (id: string) => router.push(`/properties/${id}`);
+
+  const { data: latestProperties, loading: latestPropertiesLoading } =
+    useAppwrite({
+      fn: getLatestProperties,
+    });
+
+  const { data: properties, loading, refetch } = useAppwrite({
+    fn: getProperties,
+    params: {
+      filter: params.filter,
+      query: params.query!,
+      limit: 6,
+    },
+    skip: true,
+  });
+
+  useEffect(() => {
+    refetch({
+      filter: params.filter,
+      query: params.query!,
+      limit: 6,
+    });
+  }, [params.filter, params.query]);
 
   return (
     <SafeAreaView className="bg-white h-full">
       {/* <Button title="Seed" onPress={seed} /> */}
       <FlatList
-        data={[1, 2, 3, 4]}
-        keyExtractor={(item) => item.toString()}
+        data={properties}
+        renderItem={({ item }: { item: Models.Document }) => (
+          <Card
+            item={item}
+            onPress={() => handleCardPress(item.$id)}
+          />
+        )}
+        ListEmptyComponent={loading
+          ? (
+            <ActivityIndicator
+              size="large"
+              className="text-primary-300, mt-5"
+            />
+          )
+          : <NoResults />}
+        keyExtractor={(item) => item.$id}
         numColumns={2}
         contentContainerClassName="pb-32"
         columnWrapperClassName="flex px-5 gap-5"
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => <Card />}
         ListHeaderComponent={
           <View className="px-5">
             <View className="flex flex-row items-center justify-between mt-5">
@@ -63,15 +112,31 @@ export default function Index() {
               </View>
 
               {/* Featured List Cards */}
-              <FlatList
-                data={[1, 2, 3, 4, 5]}
-                keyExtractor={(item) => item.toString()}
-                renderItem={(item) => <FeaturedCard />}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                bounces={false}
-                contentContainerClassName="flex gap-5 mt-5"
-              />
+              {latestPropertiesLoading
+                ? (
+                  <ActivityIndicator
+                    size="large"
+                    className="text-primary-300 mt-5"
+                  />
+                )
+                : !latestProperties || latestProperties.length === 0
+                ? <NoResults />
+                : (
+                  <FlatList
+                    data={latestProperties}
+                    keyExtractor={(item) => item.$id}
+                    renderItem={({ item }: { item: Models.Document }) => (
+                      <FeaturedCard
+                        item={item}
+                        onPress={() => handleCardPress(item.$id)}
+                      />
+                    )}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    bounces={false}
+                    contentContainerClassName="flex gap-5 mt-5"
+                  />
+                )}
             </View>
             <View className="my-5">
               <View className="flex flex-row items-center justify-between">
